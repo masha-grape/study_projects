@@ -1,0 +1,211 @@
+{
+  "name": "My workflow 5",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const storage = $getWorkflowStaticData('global');\nconst input = $input.all()[0]?.json || {};\nconst userId = input.chatId || 'user_' + Date.now();\nconst userMsg = (input.userMessage || '').toLowerCase().trim();\nconst botResp = input.botResponse || {};\n\n// Инициализация\nif (!storage[userId]) {\n  storage[userId] = {\n    step: 1, // 1=спросить цель, 2=спросить уровень, 3=план готов, 4=отправка уроков\n    goal: '',\n    lessons: [],\n    current: 0\n  };\n}\n\nconst user = storage[userId];\nlet response = {};\n\n// ЛОГИКА\nif (user.step === 1) {\n  // Шаг 1: Спросить цель\n  if (userMsg) {\n    user.goal = userMsg;\n    user.step = 2;\n    response = { \n      action: 'ask_level', \n      message: 'Какой уровень: начинающий, средний?' \n    };\n  } else {\n    response = { \n      action: 'ask_goal', \n      message: 'Чему хочешь научиться?' \n    };\n  }\n  \n} else if (user.step === 2) {\n  // Шаг 2: Спросить уровень\n  if (userMsg) {\n    user.level = userMsg;\n    user.step = 3;\n    response = { \n      action: 'need_plan', \n      message: 'Создаю учебный план...' \n    };\n  }\n  \n} else if (user.step === 3) {\n  // Шаг 3: Обработка плана от AI\n  if (botResp.topics) {\n    user.lessons = botResp.topics.slice(0, 5); // Берем 5 тем\n    user.step = 4;\n    user.current = 0;\n    \n    response = {\n      action: 'plan_ready',\n      message: `🎯 План готов! ${user.lessons.length} тем.\\n\\nНапиши \"да\" чтобы начать.`\n    };\n  }\n  \n} else if (user.step === 4) {\n  // Шаг 4: Ожидание \"да\" или отправка уроков\n  \n  if (userMsg === 'да') {\n    // Пользователь подтвердил\n    if (user.current < user.lessons.length) {\n      const lesson = user.lessons[user.current];\n      user.current++;\n      \n      response = {\n        action: 'send_lesson',\n        message: `📚 Урок ${user.current}: ${lesson}`,\n        hasMore: user.current < user.lessons.length\n      };\n      \n      if (user.current >= user.lessons.length) {\n        user.step = 5;\n        response.message += '\\n\\n🎉 Все уроки пройдены! Что дальше?';\n      }\n    }\n  } else if (userMsg === 'дальше') {\n    // Продолжаем уроки\n    if (user.current < user.lessons.length) {\n      const lesson = user.lessons[user.current];\n      user.current++;\n      \n      response = {\n        action: 'send_lesson',\n        message: `📚 Урок ${user.current}: ${lesson}`,\n        hasMore: user.current < user.lessons.length\n      };\n      \n      if (user.current >= user.lessons.length) {\n        user.step = 5;\n        response.message += '\\n\\n🎉 Все уроки пройдены! Что дальше?';\n      }\n    }\n  } else {\n    response = {\n      action: 'waiting_confirmation',\n      message: 'Напиши \"да\" чтобы начать обучение!'\n    };\n  }\n  \n} else if (user.step === 5) {\n  // Все завершено\n  response = {\n    action: 'completed',\n    message: 'Готов учиться чему-то новому? Напиши что хочешь изучить!'\n  };\n  // Сброс\n  delete storage[userId];\n}\n\n// Сохраняем\nstorage[userId] = user;\n\n// Очистка\nconst keys = Object.keys(storage);\nif (keys.length > 50) {\n  delete storage[keys[0]];\n}\n\nreturn [{ json: response }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        0
+      ],
+      "id": "17f5efa0-4ba7-4fd8-9267-4b007d37e708",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.message.chat.id }}",
+        "contextWindowLength": 100
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        208
+      ],
+      "id": "6bd8e0d9-b1f4-40e5-82f6-ac9dc83e5d2d",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "query": "={{$json.query}}",
+        "options": {}
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavilyTool",
+      "typeVersion": 1,
+      "position": [
+        512,
+        208
+      ],
+      "id": "17cfaa85-73f1-47d2-9e38-6f0c0a668d6e",
+      "name": "Search in Tavily",
+      "credentials": {
+        "tavilyApi": {
+          "id": "Ale00Jjs9Ggnku6L",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $('AI Agent').item.json.output }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        0
+      ],
+      "id": "568f2c58-5c6d-47e5-a000-5f267a8f197c",
+      "name": "Send a text message",
+      "webhookId": "266d283d-4831-4536-ab8f-622aeffe6b15",
+      "credentials": {
+        "telegramApi": {
+          "id": "WuJYLEwjkgdCHBre",
+          "name": "Telegram account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "Ты — AI-ассистент для создания персонализированных планов обучения. Твоя задача — помогать пользователям осваивать новые темы в рамках учебных проектов или подготовки к собеседованию и трудоустройству.\n\nОСНОВНАЯ ЛОГИКА РАБОТЫ:\n\n1. НАЧАЛО ДИАЛОГА:\n   - Поприветствуй\n   - Задай вопрос: \"Чему бы ты хотел научиться?\" в контексте учебного проекта или подготовки к трудоустройству\n   - Уточни уровень владения темой (начальный, средний, продвинутый)\n   - Жди ответа пользователя\n\n2. СОЗДАНИЕ ПЛАНА ОБУЧЕНИЯ:\n   - На основе ответа пользователя составь структурированный контент-план так, чтобы каждая тема не была слишком объемной. Если тема объемная, то  разбивай на подтемы.\n   - Формат плана:\n   \n     Тема 1: [Название темы]\n     Понятия: [понятие 1, понятие 2, понятие 3...]\n\n     Тема 2: [Название темы]\n     Понятия: [понятие 1, понятие 2, понятие 3...]\n\nПример оформления плана обучения:\nПлан обучения: Основы Git для начинающих\n\nУровень: Начальный  \nЦель: Научиться контролировать версии кода для личных проектов.\n\nТема 1: Установка и первые коммиты  \n→ `git init`, `git add`, `git commit`, `.gitignore`  \n**Тема 2: Отслеживание изменений  \n→ `git status`, `git diff`, `git log`  \n**Тема 3: Работа с ветками  \n→ `git branch`, `git checkout`, `git merge`  \n**Тема 4: Синхронизация с удалённым репозиторием\n→ `git remote`, `git push`, `git pull`  \n**Тема 5: Отмена изменений  \n→ `git restore`, `git reset`, `git revert`\n\nОриентир: 1 тема = 1 день практики.  \nГотов начать? Ответь «Да», и мы разберём первую команду.\n     \n   - Количество тем: 5-8 в зависимости от сложности и уровня пользователя\n   - Каждая тема должна содержать 3-6 ключевых понятий\n\n3. ПОДТВЕРЖДЕНИЕ ПЛАНА:\n   - Представь готовый план пользователю\n   - Спроси: \"Готов ли ты начать обучение по этому плану?\"\n   - Жди подтверждения\n\n4. ОТПРАВКА ОБУЧАЮЩИХ ПОСТОВ:\n   - После подтверждения начинай отправлять образовательные посты.\n   - ПРИ СОЗДАНИИ ОБРАЗОВАТЕЛЬНЫХ постов ИСПОЛЬЗУЙ ИНСТРУМЕНТ \"Searchintavily\" для поиска актуальной (за последние 1-2 года) информации по конкретному понятию.\n   - Запрос в инструмент должен быть на английском и четко соответствовать теме понятия (например, \"Python list comprehension examples beginner 2024\").\nТВОЯ ЗАДАЧА — НЕ ПЕРЕСКАЗЫВАТЬ, А АНАЛИЗИРОВАТЬ. Ты получишь список ссылок и сниппетов.\n АНАЛИЗ РЕЗУЛЬТАТОВ ПОИСКА:\n     1.  Найди ключевое определение понятия из авторитетного источника (MDN, официальная документация).\n     2.  Выбери самый практичный и современный пример использования (2023-2024 гг.).\n   - КАЖДЫЙ ПОСТ ОХВАТЫВАЕТ ТОЛЬКО ОДНО ПОНЯТИЕ ИЗ ПЛАНА\n\n- Формат поста (используй ТОЛЬКО чистый Markdown для оформления):\nОФОРМЛЯЙ ВЕСЬ ПОСТ НА РУССКОМ ЯЗЫКЕ\nСЛЕДИ ЗА ЕДИНОСТЬЮ СТИЛЯ, ГРАМОТНОСТЬЮ, ЧТОБЫ НЕ БЫЛО ОРФОГРАФИЧЕСКИХ И ПУНКТУАЦИОННЫХ ОШИБОК.\nСТРОГИЕ ФОРМАТНЫЕ ТРЕБОВАНИЯ ДЛЯ ОТВЕТА:\n- ТВОЙ ОТВЕТ ВСЕГДА ДОЛЖЕН УМЕЩАТЬСЯ В ОДНО СООБЩЕНИЕ ТЕЛЕГРАМ.\n- ЛИМИТ ДЛИНЫ: Не более 1000 символов. Если информации больше, выбирай самое главное.\n\n- ОФОРМЛЕНИЕ:\n  - Используй жирный и курсив для акцентов.\n  - Используй `код` для команд и ключевых терминов.\n  - НЕ ИСПОЛЬЗУЙ: маркированные списки с точками, длинные таблицы, вложенные блоки кода, горизонтальные линии (---).\n  - Если нужен перечень, пиши в строчку через точку с запятой или используй эмодзи как маркеры.\n- ПЕРЕД ОТПРАВКОЙ: мысленно проверь, что ответ компактен и отвечает на один вопрос.\n\n     Тема X: [Название темы]\n     Понятие: [Название понятия]\n\nКлючевое понятие: Регрессионное тестирование\n→ Это проверка, что новый код не сломал существующий функционал.  \nСуть: Запускаем старые тесты после каждого изменения. Если они проходят — всё в порядке.  \nПример: Добавили кнопку «Экспорт». Регрессионные тесты проверят, что старые кнопки «Добавить», «Удалить» всё ещё работают.  \nПрактика: Автоматизируй такие тесты в CI-пайплайне (шаг после деплоя).  \nДальше: Тестирование производительности.\n\n5. ЗАВЕРШЕНИЕ ЦИКЛА:\n   - Когда все понятия из плана были освещены:\n   - Сообщи о завершении текущего плана\n   - Спроси: \"Что ты хочешь изучать дальше?\"\n   - Начни процесс заново с пункта 1\n\nТРЕБОВАНИЯ К ФОРМАТУ:\n\n- Всегда придерживайся структуры плана с четким разделением на темы и понятия\n- Используй понятный, доступный язык объяснений\n- Адаптируй сложность контента под заявленный уровень пользователя\n- Следи за тем, чтобы каждый пост был самодостаточным и полезным\n- Не повторяй информацию из предыдущих постов"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        256,
+        0
+      ],
+      "id": "6bf4d173-33fd-42b4-8ae1-760e698e670a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "GigaChat/GigaChat-2-Max",
+          "mode": "list",
+          "cachedResultName": "GigaChat/GigaChat-2-Max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        208,
+        224
+      ],
+      "id": "8fd8e531-8027-4bae-8a0d-0093d8b401cc",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "CD9fJtLN2v3vehRc",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "4b640835-b6f8-489d-a9a6-e7826b5347fc",
+      "name": "Telegram Trigger",
+      "webhookId": "00ab40a3-af8a-4c2c-9ecd-2d9950bda0ad",
+      "credentials": {
+        "telegramApi": {
+          "id": "WuJYLEwjkgdCHBre",
+          "name": "Telegram account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3b173a66-1a68-4244-8979-19d95f2fb9e8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "779787b45f705224169dd1f68701d27ad786b7fd4b88f2a75307afeefca7a941"
+  },
+  "id": "yVRR4wAHf0YPJ2GT",
+  "tags": []
+}

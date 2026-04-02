@@ -1,0 +1,293 @@
+{
+  "name": "My workflow 4 copy",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 12
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e1371639-f2ae-465e-bd54-eeed55cd68be",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.hh.ru/vacancies",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "Data science"
+            },
+            {
+              "name": "area",
+              "value": "1"
+            },
+            {
+              "name": "per_page",
+              "value": "50"
+            },
+            {
+              "name": "page",
+              "value": "0"
+            },
+            {
+              "name": "period",
+              "value": "7"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-parser (vinogradova.m.y@gmail.com)"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "fd385df5-a91b-41cf-bbcc-1d916d95778f",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "options": {
+          "systemMessage": "=Тебе нужно проанализировать навыки из массива. Учти, что это файл json. Предварительно очисти текст от формата json, чтоб тебе было удобно его читать.\nДалее пранализируй все требования к навыкам вакансиям и скажи, какие из них повторяются чаще всего.\nТвой вывод должен выглядеть так:\n\"На этой неделе я спарсил N свежих вакансий по выбранному тобой направлению. Самыми популярными являются следующие требования:\nтребование: количество раз\"\nв количестве раз укажи КОНКРЕТНОЕ ЧИСЛО!!!\nНЕ ДОПИСЫВАЙ ДОПОЛНИТЕЛЬНЫЙ ТЕКСТ ПИШИ ТОЛЬКО ПО ШАБЛОНУ, ИНАЧЕ Я ТЕБЯ ОТКЛЮЧУ\nты должен вывести РОВНО ТОП 15 и требований. НЕ БОЛЬШЕ И НЕ МЕНЬШЕ\nЕСЛИ ТЫ ВЫВЕДЕШЬ БОЛЕЕ ИЛИ МЕНЕЕ 15 ТРЕБОВАНИЙ Я ТЕБЯ ОТКЛЮЧУ"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "506b8f91-917c-47d5-913a-2d132f407667",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "GigaChat/GigaChat-2-Max",
+          "mode": "list",
+          "cachedResultName": "GigaChat/GigaChat-2-Max"
+        },
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        180
+      ],
+      "id": "24e2edcf-cfa1-416e-835e-5aeefdd0ab4b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "7XLZD6ceIaKllMG3",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.first().json.items;\n\nreturn items.map(item => {\n  return {\n    json: {\n      vacancyId: item.id\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "bcac4908-fc36-4f85-be10-3a78b453cb00",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.hh.ru/vacancies/{{ $json.vacancyId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-parser (vinogradova.m.y@gmail.com)"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "id": "e9aacd38-7886-4470-b211-ad6b5ea18dda",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "description, key_skills",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        880,
+        0
+      ],
+      "id": "182d847d-6c01-4055-b509-c7c0eff247f6",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "chatId": "@DS_daydzest",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1480,
+        0
+      ],
+      "id": "797ccec4-b613-481e-ab19-99c46c0c751a",
+      "name": "Telegram",
+      "webhookId": "806c2337-3ffc-41e6-9cd6-317c5e4c9dd5",
+      "credentials": {
+        "telegramApi": {
+          "id": "rNszkqtpx3MVOTR4",
+          "name": "Telegram account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "dc2af120-b8b5-4fb3-9f42-2d385bf3c61d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e04cc82c080d8b10209309c01e254557053aea1ba59fbea81aa0bc4750c18079"
+  },
+  "id": "EQu7W8mEy8sAgP7y",
+  "tags": []
+}

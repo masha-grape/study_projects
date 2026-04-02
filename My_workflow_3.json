@@ -1,0 +1,271 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "options": {
+          "systemMessage": "Ты видишь новости из телеграм канала. Саммари должно быть очень коротким. НЕ БОЛЕЕ 4000 СИМВОЛОВ ДОЛЖЕН ЗАНИМАТЬ ВЕСЬ ТВОЙ ВЫВОД! \nЕСЛИ ТЫ НЕ НАПИШЕШЬ САММАРИ КОРОТКО, ТО Я ТЕБЯ ОТКЛЮЧУ.\nНЕ  ЗАБЫВАЙ НАПИСАТЬ КОРОТКИЙ АЗБАЦ САММАРИ ПО ВСЕМ ПОСТАМ СРАЗУ, а только потом переходи к саммари по отдельным каналам. Общее саммари по всем постам должно быть очень коротким.\nНапиши самммари и выведи в формате:\n\nОбщее саммари о всех постах в одном абзаце.\n\nНазвание канала - количество постов\nпост 1: краткое описание, ссылка\nпост 2: краткое описание, ссылка\nНазвание канала - количество постов\nпост 1: краткое описание, ссылка\n\nВот твой примерный формат вывода на примере одного из постов. не забывай добавлять ссылки на посты в телегам:\n@aimachinelearningbigdata - 1 пост\nПост 1: Уровень безработицы среди граждан Америки с высшим образованием зафиксирован самым высоким показателем за все время наблюдения; молодой сегмент работающего населения тоже чувствует заметное давление, процентная разница относительно прошлого периода достигла ежегодного пика со времен предыдущего масштабного экономического спада. https://t.me/aimachinelearningbigdata/9078\nНЕ БОЛЕЕ 4000 СИМВОЛОВ ДОЛЖЕН ЗАНИМАТЬ ВЕСЬ ТВОЙ ВЫВОД! \nЕСЛИ ТЫ НЕ НАПИШЕШЬ САММАРИ КОРОТКО, ТО Я ТЕБЯ ОТКЛЮЧУ.\nЕсли весь текст не вмещается, ты можешь написать пользователю предупреждение, что лимит символов в сообщении превышен, поэтому ты не выводишь весь перечень новостей."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        1740,
+        -20
+      ],
+      "id": "82ff196b-ff8b-4ff1-b8f1-3cc76ad61ff5",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "GigaChat/GigaChat-2-Max",
+          "mode": "list",
+          "cachedResultName": "GigaChat/GigaChat-2-Max"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1740,
+        140
+      ],
+      "id": "1b26c6e2-19b1-4454-bc75-748e83095b63",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "7XLZD6ceIaKllMG3",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "@DS_daydzest",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2040,
+        -20
+      ],
+      "id": "bea1e08d-e781-426e-a699-d5442e9088d9",
+      "name": "Telegram",
+      "webhookId": "f9aad8ef-bb4c-4384-bec4-44e436f7f4ed",
+      "credentials": {
+        "telegramApi": {
+          "id": "rNszkqtpx3MVOTR4",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://fetchrss.com/feed/1vOEqo3pX2i31vOF382GaCJA.rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        1160,
+        -160
+      ],
+      "id": "40e3d96b-ae0e-41fc-ba8c-f568f2f4f8b7",
+      "name": "RSS Read"
+    },
+    {
+      "parameters": {
+        "url": "https://fetchrss.com/feed/1vOEqo3pX2i31vOF1k99aFda.rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        1160,
+        -20
+      ],
+      "id": "0a0fd479-3c30-450b-9937-d7d3f57ad576",
+      "name": "RSS Read1"
+    },
+    {
+      "parameters": {
+        "url": "https://fetchrss.com/feed/1vOEqo3pX2i31vOEpe2GaCJ8.rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        1160,
+        120
+      ],
+      "id": "cf20b15a-59e5-4f60-ab5d-120df29644b5",
+      "name": "RSS Read2"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        1380,
+        -20
+      ],
+      "id": "72fdbfff-4f25-4934-9eb0-a4a0cb8e271b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "595cd497-d0a2-4858-a014-f75e2dd52933",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "link, contentSnippet",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        -20
+      ],
+      "id": "dcbae4d3-aa77-4754-9a80-84a5d6953692",
+      "name": "Aggregate"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "RSS Read2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "58e0c1fb-1c2b-41ad-bbb1-691bbf65c445",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e04cc82c080d8b10209309c01e254557053aea1ba59fbea81aa0bc4750c18079"
+  },
+  "id": "VPJZngoxcvU5peVC",
+  "tags": []
+}
